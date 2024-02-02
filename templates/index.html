@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+    <title>SUBLIME LLC</title>
+    <style>
+        body {
+            background-color: #212529; /* Dark background color */
+            color: #ffc107; /* Yellow text color */
+        }
+
+        header {
+            background-color: #343a40; /* Darker background color for header */
+            color: #ffc107;
+            padding: 15px 0;
+            text-align: center;
+        }
+
+        .container {
+            background-color: #343a40; /* Darker background color for container */
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+
+        .logo {
+            max-width: 150px;
+            height: auto;
+        }
+
+        h1, h2 {
+            color: #ffc107; /* Yellow text color */
+        }
+
+        .card {
+            border: none;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            background-color: #424242; /* Darker background color for card */
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .btn-primary {
+            background-color: #ffc107; /* Yellow button color */
+            border-color: #ffc107;
+        }
+
+        .btn-primary:hover {
+            background-color: #c79100; /* Darker shade on hover */
+            border-color: #c79100;
+        }
+
+        .table th, .table td {
+            text-align: center;
+        }
+
+        .btn-success {
+            background-color: #28a745; /* Bootstrap success color */
+            border-color: #28a745;
+        }
+
+        .btn-success:hover {
+            background-color: #218838; /* Darker shade on hover */
+            border-color: #218838;
+        }
+
+        input[type="number"],
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            background-color: #343a40; /* Darker background color for input fields */
+            color: #ffc107; /* Yellow text color for input fields */
+        }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus {
+            border-color: #ffc107; /* Yellow border color on focus */
+            box-shadow: 0 0 8px rgba(255, 193, 7, 0.4); /* Yellow box shadow on focus */
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>SUBLIME LLC</h1>
+    </header>
+
+    <div class="container mt-5">
+        <div class="text-center mb-4">
+        </div>
+        <div class="card">
+            <div class="card-body">
+                <h1 class="card-title mb-4">Web Extraction App</h1>
+                <form method="post" action="/extract">
+                    <div class="form-row">
+                        <div class="form-group col-md-6">
+                            <label for="start_query">Start Query:</label>
+                            <input type="number" class="form-control" id="start_query" name="start_query" required>
+                        </div>
+                        <div class="form-group col-md-6">
+                            <label for="end_query">End Query:</label>
+                            <input type="number" class="form-control" id="end_query" name="end_query" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Extract Data</button>
+                </form>
+            </div>
+        </div>
+
+        {% if data %}
+        <div class="table-responsive mt-4">
+    <table class="table table-bordered table-striped" style="background-color: #f8f9fa;"> <!-- Light gray background color -->
+        <thead>
+            <tr>
+                <th>Legal Name</th>
+                <th>Physical Address</th>
+                <th>Phone</th>
+                <th>MC/MX/FF Number(s)</th>
+                <th>Vehicle</th>
+                <th>Driver</th>
+                <th>General Freight Output</th>
+                <th>Details</th> <!-- Add this column for the link -->
+                <th>Comments</th> <!-- Add this column for comments -->
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in data %}
+            <tr>
+                <td>{{ row['Legal Name'] }}</td>
+                <td>{{ row['Physical Address'] }}</td>
+                <td><a href="tel:{{ row['Phone'] }}"
+                        onclick="redirectToGoogleVoice('{{ row['Phone'] }}')"> {{ row['Phone'] }}</a></td>
+                <td>{{ row['MC/MX/FF Number(s)'] }}</td>
+                <td>{{ row['Vehicle'] }}</td>
+                <td>{{ row['Driver'] }}</td>
+                <td>{{ row['General_Freight_Output'] }}</td>
+                <td><a href="#"
+                        onclick="redirectToDetails('{{ row['MC/MX/FF Number(s)'] }}')">Details</a></td>
+                <td><input type="text" id="comments_{{ loop.index }}"
+                        onchange="saveComments('{{ row['MC/MX/FF Number(s)'] }}', this.value)"
+                        value="{{ row['Comments'] }}"></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+        <div class="mt-3">
+            <a href="{{ url_for('download', csv_path=csv_path) }}" class="btn btn-success">Download Data</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        function redirectToDetails(queryNumber) {
+            var redirectUrl = 'https://safer.fmcsa.dot.gov/query.asp?searchtype=ANY&query_type=queryCarrierSnapshot&query_param=MC_MX&query_string=' +
+                queryNumber.replace('MC-', '');
+            window.open(redirectUrl, '_blank');
+        }
+
+        function redirectToGoogleVoice(phoneNumber) {
+            var redirectUrl = 'tel:YOUR_GOOGLE_VOICE_NUMBER' + phoneNumber;
+            window.open(redirectUrl, '_blank');
+        }
+
+        function saveComments(queryNumber, comments) {
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', '/save_comments', true);
+            xhr.setRequestHeader('Content-Type', 'application/json');
+            xhr.send(JSON.stringify({
+                queryNumber: queryNumber,
+                comments: comments
+            }));
+        }
+    </script>
+</body>
+
+</html>
